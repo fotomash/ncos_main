@@ -7,6 +7,7 @@ of the system session, including token budget, agent states, and memory.
 
 from typing import Dict, List, Optional, Any, Set
 from datetime import datetime
+import resource
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -49,6 +50,9 @@ class SessionState(BaseModel):
 
     # Memory state
     memory_namespaces: Set[str] = Field(default_factory=set)
+    memory_limit_mb: int = 1024
+    current_memory_mb: float = 0.0
+    peak_memory_mb: float = 0.0
 
     # Metrics
     total_tokens_used: int = 0
@@ -78,6 +82,18 @@ class SessionState(BaseModel):
         """Increment the action execution count."""
         self.total_actions_executed += 1
         self.last_updated = datetime.now()
+
+    def update_memory_usage(self) -> None:
+        """Update memory usage statistics."""
+        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+        self.current_memory_mb = usage
+        if usage > self.peak_memory_mb:
+            self.peak_memory_mb = usage
+        self.last_updated = datetime.now()
+
+    def memory_exceeded(self) -> bool:
+        """Check if memory usage exceeds the configured limit."""
+        return self.current_memory_mb >= self.memory_limit_mb
 
     def create_snapshot(self) -> Dict[str, Any]:
         """Create a snapshot of the current session state."""

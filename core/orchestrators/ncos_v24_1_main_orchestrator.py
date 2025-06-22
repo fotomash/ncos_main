@@ -9,6 +9,7 @@ import os
 import json
 import pandas as pd
 import numpy as np
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
@@ -16,6 +17,9 @@ import traceback
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from src.session_state import SessionState
+from src.budget import TokenBudgetManager
+from src.core import SystemConfig
 
 # Configure logging
 logging.basicConfig(
@@ -194,9 +198,12 @@ class DataPipelineV24:
 class AnalysisEngineV24:
     """Consolidated analysis engine for NCOS v24.1"""
 
-    def __init__(self, config: NCOSConfig):
+    def __init__(self, config: NCOSConfig, session_state: Optional[Any] = None, token_manager: Optional[Any] = None):
         self.config = config
+        self.session_state = session_state
+        self.token_manager = token_manager
         self.analyzers = {}
+        self.performance_history: List[Dict[str, Any]] = []
         self._initialize_analyzers()
 
     def _initialize_analyzers(self):
@@ -215,14 +222,36 @@ class AnalysisEngineV24:
             logger.info(f"Running full analysis for {symbol}")
 
             results = {}
+            perf = {}
+            start_overall = time.time()
 
-            # Run all analyzers
+            # Run all analyzers with performance tracking
             for analyzer_name, analyzer_func in self.analyzers.items():
+                start = time.time()
                 try:
                     results[analyzer_name] = await analyzer_func(data, symbol)
+                    status = 'success'
                 except Exception as e:
                     logger.error(f"Analyzer {analyzer_name} failed: {e}")
                     results[analyzer_name] = {'error': str(e)}
+                    status = 'error'
+                elapsed_ms = (time.time() - start) * 1000
+                perf[analyzer_name] = {
+                    'status': status,
+                    'time_ms': round(elapsed_ms, 2)
+                }
+
+            perf['total_time_ms'] = round((time.time() - start_overall) * 1000, 2)
+
+            if self.session_state:
+                self.session_state.update_memory_usage()
+            if self.token_manager:
+                perf['token_budget'] = self.token_manager.get_status().dict()
+
+            self.performance_history.append({
+                'timestamp': datetime.utcnow().isoformat(),
+                'metrics': perf
+            })
 
             # Calculate overall confluence score
             confluence_score = self._calculate_overall_confluence(results)
@@ -232,6 +261,7 @@ class AnalysisEngineV24:
                 'symbol': symbol,
                 'analysis': results,
                 'confluence_score': confluence_score,
+                'performance': perf,
                 'timestamp': datetime.utcnow().isoformat()
             }
 
@@ -497,7 +527,12 @@ class NCOSMainOrchestrator:
     def __init__(self, config_dir: str = "config"):
         self.config = NCOSConfig(config_dir)
         self.data_pipeline = DataPipelineV24(self.config)
-        self.analysis_engine = AnalysisEngineV24(self.config)
+
+        self.token_manager = TokenBudgetManager(8000, 0.1)
+        self.session_state = SessionState(token_budget=self.token_manager.get_status(), config=SystemConfig())
+        self.token_manager.session_state = self.session_state
+
+        self.analysis_engine = AnalysisEngineV24(self.config, session_state=self.session_state, token_manager=self.token_manager)
         self.strategy_engine = StrategyEngineV24(self.config)
         self.execution_engine = ExecutionEngineV24(self.config)
 
