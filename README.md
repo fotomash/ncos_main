@@ -17,7 +17,7 @@ ncos_v11_5_complete_package/
 ├── requirements.txt             # Python dependencies
 ├── main.py                      # Application entry point
 ├── src/                         # Source code
-│   ├── master_orchestrator.py   # Core orchestrator
+│   ├── core/orchestrators/unified_orchestrator.py   # Core orchestrator
 │   ├── schemas/                 # Pydantic models
 │   ├── mesh/                    # Neural mesh implementation
 │   ├── pipeline/                # Processing pipeline

@@ -104,7 +104,7 @@ System configuration defines the total token budget.
 
 Each agent profile specifies its token requirements.
 
-The Master Orchestrator allocates tokens based on priority and availability.
+The Unified Orchestrator allocates tokens based on priority and availability.
 
 Token usage is tracked per agent and operation.
 
