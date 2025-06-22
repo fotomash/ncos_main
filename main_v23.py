@@ -9,7 +9,7 @@ import argparse
 import logging
 from pathlib import Path
 
-from src.master_orchestrator import MasterOrchestrator
+from core.orchestrators import UnifiedOrchestrator
 from src.logger import setup_logging
 
 def parse_args():
@@ -36,7 +36,7 @@ def parse_args():
     )
     return parser.parse_args()
 
-def main():
+async def main():
     """Main entry point for the NCOS Phoenix system."""
     args = parse_args()
     
@@ -52,15 +52,12 @@ def main():
     logger.info(f"Working directory: {workdir}")
     
     try:
-        # Initialize the Master Orchestrator
-        orchestrator = MasterOrchestrator(
-            config_path=args.config,
-            workdir=workdir
-        )
+        # Initialize the Unified Orchestrator
+        orchestrator = UnifiedOrchestrator(args.config)
         
         # Start the system
-        orchestrator.initialize()
-        orchestrator.run()
+        await orchestrator.initialize()
+        await orchestrator.run_market_scan(["EURUSD"])  # Simple startup task
         
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down gracefully...")
@@ -73,4 +70,5 @@ def main():
     logger.info("NCOS v11.5 Phoenix-Mesh shutdown complete")
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())

@@ -2,7 +2,15 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
+from pydantic import ValidationError
+
+from src.session_state import SessionState
+from src.budget import TokenBudgetManager
+from src.core import SystemConfig
+from ncos.core.memory_manager import MemoryManager
 
 class NCOSConfig:
     """Minimal configuration wrapper."""
@@ -69,21 +77,75 @@ class TradingSignal:
 class UnifiedOrchestrator:
     """Unified orchestrator combining analysis and execution layers."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
+    def __init__(self, config: Union[Dict[str, Any], str]):
+        """Create the orchestrator.
+
+        Parameters
+        ----------
+        config:
+            Either a configuration dictionary or path to a YAML file.
+        """
+
+        self.raw_config = config
+        self.config: SystemConfig | None = None
         self.logger = logging.getLogger(__name__)
         self.active_signals: List[TradingSignal] = []
         self.engines: Dict[str, Any] = {}
 
-        self.ncos_config = NCOSConfig(config.get("config_dir", "config"))
-        self.data_pipeline = DataPipelineV24(self.ncos_config)
-        self.analysis_engine = AnalysisEngineV24(self.ncos_config)
-        self.strategy_engine = StrategyEngineV24(self.ncos_config)
-        self.execution_engine = UnifiedExecutionEngine(self.ncos_config.get("risk_config", {}))
+        # Will be initialized later
+        self.ncos_config: NCOSConfig | None = None
+        self.data_pipeline: DataPipelineV24 | None = None
+        self.analysis_engine: AnalysisEngineV24 | None = None
+        self.strategy_engine: StrategyEngineV24 | None = None
+        self.execution_engine: UnifiedExecutionEngine | None = None
+        self.token_manager: TokenBudgetManager | None = None
+        self.session_state: SessionState | None = None
+        self.memory_manager: MemoryManager | None = None
 
     async def initialize(self) -> None:
         self.logger.info("Initializing Unified Orchestrator")
+
+        self._load_config()
+
+        self.token_manager = TokenBudgetManager(
+            self.config.token_budget.total,
+            self.config.token_budget.reserve_percentage,
+        )
+        self.session_state = SessionState(
+            token_budget=self.token_manager.get_budget(),
+            config=self.config,
+        )
+
+        # Initialize memory manager (vector store configuration can be extended)
+        self.memory_manager = MemoryManager({"vector_store_provider": "mock"})
+        await self.memory_manager.initialize()
+
+        self.ncos_config = NCOSConfig(self.config.workspace_dir)
+        self.data_pipeline = DataPipelineV24(self.ncos_config)
+        self.analysis_engine = AnalysisEngineV24(self.ncos_config)
+        self.strategy_engine = StrategyEngineV24(self.ncos_config)
+        self.execution_engine = UnifiedExecutionEngine(
+            self.ncos_config.get("risk_config", {})
+        )
+
         await self._initialize_engines()
+
+    def _load_config(self) -> None:
+        """Load configuration from dict or YAML file."""
+        try:
+            if isinstance(self.raw_config, str):
+                with open(self.raw_config, "r") as f:
+                    data = yaml.safe_load(f)
+            else:
+                data = self.raw_config
+
+            self.config = SystemConfig(**data)
+        except FileNotFoundError:
+            self.logger.error(f"Configuration file not found: {self.raw_config}")
+            raise
+        except (yaml.YAMLError, ValidationError) as e:
+            self.logger.error(f"Configuration load error: {e}")
+            raise
 
     async def _initialize_engines(self) -> None:
         try:
