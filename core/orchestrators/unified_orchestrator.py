@@ -11,6 +11,13 @@ from src.session_state import SessionState
 from src.budget import TokenBudgetManager
 from src.core import SystemConfig
 from ncos.core.memory_manager import MemoryManager
+from ncos.core.pipeline_models import (
+    DataRequest,
+    DataResult,
+    AnalysisResult,
+    StrategyMatch,
+    ExecutionResult,
+)
 
 class NCOSConfig:
     """Minimal configuration wrapper."""
@@ -28,13 +35,12 @@ class DataPipelineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def fetch_and_process(self, symbol: str, timeframes: List[str]):
-        return {
-            "status": "success",
-            "symbol": symbol,
-            "data": {},
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    async def fetch_and_process(self, request: DataRequest) -> DataResult:
+        return DataResult(
+            status="success",
+            symbol=request.symbol,
+            data={},
+        )
 
 
 class AnalysisEngineV24:
@@ -43,14 +49,13 @@ class AnalysisEngineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def run_full_analysis(self, data: Dict[str, Any], symbol: str):
-        return {
-            "status": "success",
-            "symbol": symbol,
-            "analysis": {},
-            "confluence_score": 0.0,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    async def run_full_analysis(self, data: DataResult) -> AnalysisResult:
+        return AnalysisResult(
+            status="success",
+            symbol=data.symbol,
+            analysis={},
+            confluence_score=0.0,
+        )
 
 
 class StrategyEngineV24:
@@ -59,8 +64,8 @@ class StrategyEngineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def match_strategy(self, analysis_result: Dict[str, Any]):
-        return {"strategy": None, "confidence": 0.0, "status": "no_match"}
+    async def match_strategy(self, analysis_result: AnalysisResult) -> StrategyMatch:
+        return StrategyMatch(strategy=None, confidence=0.0, status="no_match")
 from src.unified_execution_engine import UnifiedExecutionEngine
 
 
@@ -178,26 +183,27 @@ class UnifiedOrchestrator:
         if timeframes is None:
             timeframes = ["m15", "h1", "h4"]
 
-        data_result = await self.data_pipeline.fetch_and_process(symbol, timeframes)
-        if data_result["status"] != "success":
-            return data_result
+        data_request = DataRequest(symbol=symbol, timeframes=timeframes)
+        data_result = await self.data_pipeline.fetch_and_process(data_request)
+        if data_result.status != "success":
+            return data_result.model_dump()
 
-        analysis_result = await self.analysis_engine.run_full_analysis(data_result["data"], symbol)
-        if analysis_result["status"] != "success":
-            return analysis_result
+        analysis_result = await self.analysis_engine.run_full_analysis(data_result)
+        if analysis_result.status != "success":
+            return analysis_result.model_dump()
 
         strategy_result = await self.strategy_engine.match_strategy(analysis_result)
         execution_result = None
-        if strategy_result.get("status") == "match_found":
-            execution_result = await self.execution_engine.execute(strategy_result, analysis_result, symbol)
+        if strategy_result.status == "match_found":
+            execution_result = await self.execution_engine.execute(strategy_result.model_dump(), analysis_result.model_dump(), symbol)
 
         return {
             "status": "success",
             "symbol": symbol,
             "timeframes": timeframes,
-            "data_status": data_result["status"],
-            "analysis": analysis_result,
-            "strategy_match": strategy_result,
+            "data_status": data_result.status,
+            "analysis": analysis_result.model_dump(),
+            "strategy_match": strategy_result.model_dump(),
             "execution": execution_result,
             "timestamp": datetime.utcnow().isoformat(),
         }

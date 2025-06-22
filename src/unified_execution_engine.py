@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
+
+from ncos.core.pipeline_models import ExecutionResult, StrategyMatch, AnalysisResult
 import numpy as np
 
 
@@ -13,28 +15,27 @@ class UnifiedExecutionEngine:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-    async def execute(self, strategy_result: Dict[str, Any], analysis_result: Dict[str, Any], symbol: str) -> Dict[str, Any]:
-        if strategy_result.get("status") != "match_found":
-            return {"status": "no_execution"}
+    async def execute(self, strategy_result: StrategyMatch, analysis_result: AnalysisResult, symbol: str) -> ExecutionResult:
+        if strategy_result.status != "match_found":
+            return ExecutionResult(status="no_execution")
 
-        self.logger.info("Executing %s for %s", strategy_result["strategy"], symbol)
+        self.logger.info("Executing %s for %s", strategy_result.strategy, symbol)
 
-        entry_params = self._calculate_entry_parameters(strategy_result["strategy"], analysis_result, symbol)
+        entry_params = self._calculate_entry_parameters(strategy_result.strategy, analysis_result.model_dump(), symbol)
         risk_params = self._calculate_risk_parameters(entry_params)
 
-        result = {
-            "status": "executed",
-            "strategy": strategy_result["strategy"],
-            "symbol": symbol,
-            "entry_price": entry_params.get("entry_price"),
-            "stop_loss": risk_params.get("stop_loss"),
-            "take_profit": risk_params.get("take_profit"),
-            "position_size": risk_params.get("position_size"),
-            "direction": entry_params.get("direction"),
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+        result = ExecutionResult(
+            status="executed",
+            strategy=strategy_result.strategy,
+            symbol=symbol,
+            entry_price=entry_params.get("entry_price"),
+            stop_loss=risk_params.get("stop_loss"),
+            take_profit=risk_params.get("take_profit"),
+            position_size=risk_params.get("position_size"),
+            direction=entry_params.get("direction"),
+        )
 
-        self._log_execution(result)
+        self._log_execution(result.model_dump())
         return result
 
     def _calculate_entry_parameters(self, strategy: str, analysis: Dict[str, Any], symbol: str) -> Dict[str, Any]:
