@@ -16,7 +16,7 @@ Memory Coherence: All agents share access to the same memory space, ensuring con
 
 Specialized Roles: Each agent can focus on a specific domain while operating in the broader shared context.
 
-Dynamic Routing: The Master Orchestrator can direct requests to the appropriate specialized agent.
+Dynamic Routing: The Unified Orchestrator can direct requests to the appropriate specialized agent.
 
 Single-Session LLM Runtime
 
@@ -60,9 +60,9 @@ Fully persistent and queryable
 
 System Components
 
-Master Orchestrator
+Unified Orchestrator
 
-The Master Orchestrator (master_orchestrator.py) is the central control component that:
+The Unified Orchestrator (`core/orchestrators/unified_orchestrator.py`) is the central control component that:
 
 Initializes the system and loads configurations
 
@@ -126,7 +126,7 @@ System Initialization
 
 Load system configuration from config/phoenix.yaml
 
-Initialize Master Orchestrator
+Initialize Unified Orchestrator
 
 Set up Session State and Token Budget
 
@@ -172,7 +172,7 @@ Token budget management is critical for the single-session architecture:
 
 Global token budget is defined in configuration
 
-Master Orchestrator allocates tokens to agents based on priority
+Unified Orchestrator allocates tokens to agents based on priority
 
 Token usage is tracked for each agent and operation
 

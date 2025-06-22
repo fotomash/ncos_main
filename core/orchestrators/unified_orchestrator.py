@@ -2,7 +2,22 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
+from pydantic import ValidationError
+
+from src.session_state import SessionState
+from src.budget import TokenBudgetManager
+from src.core import SystemConfig
+from ncos.core.memory_manager import MemoryManager
+from ncos.core.pipeline_models import (
+    DataRequest,
+    DataResult,
+    AnalysisResult,
+    StrategyMatch,
+    ExecutionResult,
+)
 
 class NCOSConfig:
     """Minimal configuration wrapper."""
@@ -20,13 +35,12 @@ class DataPipelineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def fetch_and_process(self, symbol: str, timeframes: List[str]):
-        return {
-            "status": "success",
-            "symbol": symbol,
-            "data": {},
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    async def fetch_and_process(self, request: DataRequest) -> DataResult:
+        return DataResult(
+            status="success",
+            symbol=request.symbol,
+            data={},
+        )
 
 
 class AnalysisEngineV24:
@@ -35,14 +49,13 @@ class AnalysisEngineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def run_full_analysis(self, data: Dict[str, Any], symbol: str):
-        return {
-            "status": "success",
-            "symbol": symbol,
-            "analysis": {},
-            "confluence_score": 0.0,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
+    async def run_full_analysis(self, data: DataResult) -> AnalysisResult:
+        return AnalysisResult(
+            status="success",
+            symbol=data.symbol,
+            analysis={},
+            confluence_score=0.0,
+        )
 
 
 class StrategyEngineV24:
@@ -51,8 +64,8 @@ class StrategyEngineV24:
     def __init__(self, config: NCOSConfig):
         self.config = config
 
-    async def match_strategy(self, analysis_result: Dict[str, Any]):
-        return {"strategy": None, "confidence": 0.0, "status": "no_match"}
+    async def match_strategy(self, analysis_result: AnalysisResult) -> StrategyMatch:
+        return StrategyMatch(strategy=None, confidence=0.0, status="no_match")
 from src.unified_execution_engine import UnifiedExecutionEngine
 
 
@@ -69,21 +82,75 @@ class TradingSignal:
 class UnifiedOrchestrator:
     """Unified orchestrator combining analysis and execution layers."""
 
-    def __init__(self, config: Dict[str, Any]):
-        self.config = config
+    def __init__(self, config: Union[Dict[str, Any], str]):
+        """Create the orchestrator.
+
+        Parameters
+        ----------
+        config:
+            Either a configuration dictionary or path to a YAML file.
+        """
+
+        self.raw_config = config
+        self.config: SystemConfig | None = None
         self.logger = logging.getLogger(__name__)
         self.active_signals: List[TradingSignal] = []
         self.engines: Dict[str, Any] = {}
 
-        self.ncos_config = NCOSConfig(config.get("config_dir", "config"))
-        self.data_pipeline = DataPipelineV24(self.ncos_config)
-        self.analysis_engine = AnalysisEngineV24(self.ncos_config)
-        self.strategy_engine = StrategyEngineV24(self.ncos_config)
-        self.execution_engine = UnifiedExecutionEngine(self.ncos_config.get("risk_config", {}))
+        # Will be initialized later
+        self.ncos_config: NCOSConfig | None = None
+        self.data_pipeline: DataPipelineV24 | None = None
+        self.analysis_engine: AnalysisEngineV24 | None = None
+        self.strategy_engine: StrategyEngineV24 | None = None
+        self.execution_engine: UnifiedExecutionEngine | None = None
+        self.token_manager: TokenBudgetManager | None = None
+        self.session_state: SessionState | None = None
+        self.memory_manager: MemoryManager | None = None
 
     async def initialize(self) -> None:
         self.logger.info("Initializing Unified Orchestrator")
+
+        self._load_config()
+
+        self.token_manager = TokenBudgetManager(
+            self.config.token_budget.total,
+            self.config.token_budget.reserve_percentage,
+        )
+        self.session_state = SessionState(
+            token_budget=self.token_manager.get_budget(),
+            config=self.config,
+        )
+
+        # Initialize memory manager (vector store configuration can be extended)
+        self.memory_manager = MemoryManager({"vector_store_provider": "mock"})
+        await self.memory_manager.initialize()
+
+        self.ncos_config = NCOSConfig(self.config.workspace_dir)
+        self.data_pipeline = DataPipelineV24(self.ncos_config)
+        self.analysis_engine = AnalysisEngineV24(self.ncos_config)
+        self.strategy_engine = StrategyEngineV24(self.ncos_config)
+        self.execution_engine = UnifiedExecutionEngine(
+            self.ncos_config.get("risk_config", {})
+        )
+
         await self._initialize_engines()
+
+    def _load_config(self) -> None:
+        """Load configuration from dict or YAML file."""
+        try:
+            if isinstance(self.raw_config, str):
+                with open(self.raw_config, "r") as f:
+                    data = yaml.safe_load(f)
+            else:
+                data = self.raw_config
+
+            self.config = SystemConfig(**data)
+        except FileNotFoundError:
+            self.logger.error(f"Configuration file not found: {self.raw_config}")
+            raise
+        except (yaml.YAMLError, ValidationError) as e:
+            self.logger.error(f"Configuration load error: {e}")
+            raise
 
     async def _initialize_engines(self) -> None:
         try:
@@ -116,26 +183,27 @@ class UnifiedOrchestrator:
         if timeframes is None:
             timeframes = ["m15", "h1", "h4"]
 
-        data_result = await self.data_pipeline.fetch_and_process(symbol, timeframes)
-        if data_result["status"] != "success":
-            return data_result
+        data_request = DataRequest(symbol=symbol, timeframes=timeframes)
+        data_result = await self.data_pipeline.fetch_and_process(data_request)
+        if data_result.status != "success":
+            return data_result.model_dump()
 
-        analysis_result = await self.analysis_engine.run_full_analysis(data_result["data"], symbol)
-        if analysis_result["status"] != "success":
-            return analysis_result
+        analysis_result = await self.analysis_engine.run_full_analysis(data_result)
+        if analysis_result.status != "success":
+            return analysis_result.model_dump()
 
         strategy_result = await self.strategy_engine.match_strategy(analysis_result)
         execution_result = None
-        if strategy_result.get("status") == "match_found":
-            execution_result = await self.execution_engine.execute(strategy_result, analysis_result, symbol)
+        if strategy_result.status == "match_found":
+            execution_result = await self.execution_engine.execute(strategy_result.model_dump(), analysis_result.model_dump(), symbol)
 
         return {
             "status": "success",
             "symbol": symbol,
             "timeframes": timeframes,
-            "data_status": data_result["status"],
-            "analysis": analysis_result,
-            "strategy_match": strategy_result,
+            "data_status": data_result.status,
+            "analysis": analysis_result.model_dump(),
+            "strategy_match": strategy_result.model_dump(),
             "execution": execution_result,
             "timestamp": datetime.utcnow().isoformat(),
         }

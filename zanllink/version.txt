@@ -16,7 +16,7 @@
 ### ⚙️ Infrastructure
 - Docker + docker-compose for orchestration
 - `.env` for key configuration
-- `launch.sh` unified runner script
+- `zanllink/launch.sh` unified runner script
 - `test_api_endpoints.py` validation suite
 
 Next milestone: `v0.2-memory` (vector memory + GPT integration)
