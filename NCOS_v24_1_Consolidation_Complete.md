@@ -16,7 +16,7 @@ All uploaded trading system components have been unified into NCOS v24.1 "Phoeni
 5. requirements.txt - Python dependencies
 
 ### Documentation (5 files):
-6. NCOS_v24_1_Architecture.md - System architecture
+6. docs/architecture/NCOS_v24_1_Architecture.md - System architecture
 7. NCOS_v24_1_Implementation_Roadmap.md - Development plan
 8. NCOS_v24_1_Structure.json - System structure
 9. NCOS_v24_1_Quick_Start_Guide.md - Getting started
