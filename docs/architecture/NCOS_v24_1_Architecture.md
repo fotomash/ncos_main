@@ -41,6 +41,9 @@ NCOS v24.1 "Phoenix-Unified" is a consolidated multi-agent trading framework tha
 5. **Execution**: Entry confirmation and trade execution
 6. **Monitoring**: Performance tracking and risk management
 
+Typed Pydantic models define the expected inputs and outputs for each step. See
+[pipeline_models.md](pipeline_models.md) for field-level details.
+
 ## 🎛️ Configuration
 
 ### Strategy Rules (strategy_rules.json)
