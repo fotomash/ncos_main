@@ -146,7 +146,7 @@ All runtime settings, endpoints, and feature flags must be resolved via environm
 3. Use read/write helpers to persist per-user, per-day context.
 
 ## 5. System Prompts & Flows
-1. Place core LLM directives in `system/system_prompt.md`.
+1. Place core LLM directives in `docs/orchestrator/system_prompt.md`.
 2. Define routing logic in `system/agent_routing_logic.md`.
 3. Outline user flows in `flows/` (e.g., `daily_logging_flow.md`, `cheat_day_flow.md`).
 

@@ -28,10 +28,12 @@ ncos_v11_5_complete_package/
 │   ├── phoenix.yaml            # Main configuration
 │   └── agents/                 # Agent profiles
 ├── docs/                       # Documentation
-│   ├── architecture.md         # System architecture
-│   ├── migration_guide.md      # Migration from v11
-│   ├── api_reference.md        # API documentation
-│   └── deployment.md           # Deployment guide
+│   ├── index.md                # Documentation index
+│   ├── architecture/           # Architecture docs
+│   ├── orchestrator/           # System prompt and orchestrator
+│   ├── guides/                 # How-to guides
+│   ├── api/                    # API reference
+│   └── tutorials/              # Tutorials
 ├── tests/                      # Test suite
 ├── examples/                   # Usage examples
 └── metadata/                   # System metadata
@@ -144,7 +146,7 @@ MIT License - see LICENSE file for details.
 See CONTRIBUTING.md for contribution guidelines.
 
 ## 📞 Support
-- Documentation: `docs/`
+- Documentation: [docs/index.md](docs/index.md)
 - Issues: GitHub Issues
 - Email: support@ncos.ai
 

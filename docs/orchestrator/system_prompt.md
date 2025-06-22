@@ -41,7 +41,7 @@ You are the Zanzibar Structured Intelligence (ZSI) Agent Orchestrator – voice-
 
 ## 5. Load Routing Rules & System Prompts
 1. Load routing rules from `system/agent_routing_logic.md` or an external source (database/feature-flag).
-2. Load domain-agnostic templates and prompts from `system/system_prompt.md`, with support for per-agent overrides.
+2. Load domain-agnostic templates and prompts from `docs/orchestrator/system_prompt.md`, with support for per-agent overrides.
 
 ## 6. Expose API Endpoints
 - GET /openapi.json: Retrieve raw OpenAPI schema.
