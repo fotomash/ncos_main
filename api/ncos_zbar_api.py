@@ -44,13 +44,13 @@ async def startup_event():
     """Initialize system on startup"""
     global orchestrator, websocket_manager
 
-    from orchestrators.enhanced_core_orchestrator import EnhancedCoreOrchestrator
+    from core.orchestrators import UnifiedOrchestrator
 
     # Load configuration
     config = {}  # Would load from file
 
     # Initialize orchestrator
-    orchestrator = EnhancedCoreOrchestrator(config)
+    orchestrator = UnifiedOrchestrator(config)
     await orchestrator.initialize()
 
     print("✅ NCOS Phoenix-Session API started successfully")
