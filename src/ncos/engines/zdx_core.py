@@ -6,6 +6,7 @@ import hmac
 import base64
 import hashlib
 import requests
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -39,6 +40,12 @@ def place_order(symbol, price, quantity=0.01):
         "Authorization": auth_header,
         "Content-Type": "application/json"
     }
-    response = requests.post(DX_BASE_URL + uri, headers=headers, data=content)
-    print("[ZDX] Order Status:", response.status_code, response.text)
-    return response
+    try:
+        response = requests.post(
+            DX_BASE_URL + uri, headers=headers, data=content, timeout=10
+        )
+        logging.info("[ZDX] Order Status: %s %s", response.status_code, response.text)
+        return response
+    except requests.RequestException as e:
+        logging.error("[ZDX] Order placement failed: %s", e)
+        return None
