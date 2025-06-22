@@ -8,6 +8,8 @@ in the single-session LLM runtime.
 import logging
 from typing import Optional
 
+from .session_state import SessionState
+
 from .core import TokenBudget
 
 logger = logging.getLogger(__name__)
@@ -23,19 +25,14 @@ class TokenBudgetManager:
     4. Providing budget status and warnings
     """
 
-    def __init__(self, total_budget: int, reserve_percentage: float = 0.2):
-        """
-        Initialize the token budget manager.
-
-        Args:
-            total_budget: Total token budget for the session
-            reserve_percentage: Percentage of tokens to reserve for system operations
-        """
+    def __init__(self, total_budget: int, reserve_percentage: float = 0.2, session_state: Optional["SessionState"] = None):
+        """Initialize the token budget manager."""
         self.total_budget = total_budget
         self.reserve_percentage = max(0.0, min(1.0, reserve_percentage))
         self.reserved_tokens = int(total_budget * reserve_percentage)
         self.used_tokens = 0
         self.allocated_tokens = 0
+        self.session_state = session_state
 
         logger.info(f"Token budget initialized: {total_budget} tokens ({self.reserved_tokens} reserved)")
 
@@ -87,6 +84,8 @@ class TokenBudgetManager:
 
         self.allocated_tokens += tokens
         logger.debug(f"Allocated {tokens} tokens. Remaining: {self.available_tokens}")
+        if self.session_state:
+            self.session_state.update_token_usage(0)
         return True
 
     def release(self, tokens: int) -> None:
@@ -108,6 +107,8 @@ class TokenBudgetManager:
         """
         self.used_tokens += tokens
         self.allocated_tokens = max(0, self.allocated_tokens - tokens)
+        if self.session_state:
+            self.session_state.update_token_usage(tokens)
 
         # Log warning if usage is high
         if self.is_budget_warning():
@@ -145,3 +146,7 @@ class TokenBudgetManager:
         self.allocated_tokens = 0
 
         logger.info(f"Token budget reset: {self.total_budget} tokens ({self.reserved_tokens} reserved)")
+
+    def get_status(self) -> TokenBudget:
+        """Return current budget status."""
+        return self.get_budget()
