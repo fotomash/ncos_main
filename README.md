@@ -42,13 +42,11 @@ ncos_v11_5_complete_package/
 ## 🚀 Quick Start
 
 ### 1. Installation
+Follow the [Environment Setup guide](docs/environment_setup.md) to install
+dependencies with Poetry.
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+poetry install
+poetry shell  # activates the virtual environment
 ```
 
 ### 2. Configuration
