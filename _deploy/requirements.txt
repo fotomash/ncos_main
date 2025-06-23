@@ -1,62 +1,76 @@
-# ncOS v22.0 Requirements
+# ncOS v22 Requirements
+# Core dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+scikit-learn>=1.0.0
 
-# Core Dependencies
-fastapi==0.109.0
-uvicorn==0.25.0
-pydantic==2.5.3
-httpx==0.26.0
+# Trading and market data
+ccxt>=3.0.0
+yfinance>=0.2.0
+pandas-ta>=0.3.0
+vectorbt>=0.24.0
+backtrader>=1.9.76.123
+finnhub-python>=2.4.0
 
-# Data Processing
-pandas==2.1.4
-numpy==1.24.3
-pyarrow==14.0.2
+# Web and API
+fastapi>=0.95.0
+uvicorn>=0.20.0
+requests>=2.28.0
+websocket-client>=1.5.0
+aiohttp>=3.8.0
+httpx>=0.23.0
+
+# Database and caching
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+redis>=4.5.0
+pymongo>=4.3.0
+
+# LLM and AI
+openai>=1.0.0
+anthropic>=0.3.0
+langchain>=0.0.200
+transformers>=4.30.0
+torch>=2.0.0
+
+# Data processing
+pyarrow>=11.0.0
+dask>=2023.1.0
+polars>=0.16.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.12.0
+plotly>=5.13.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pytest>=7.2.0
+pytest-asyncio>=0.20.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Technical indicators
+ta>=0.10.0
+tulipy>=0.4.0
 
 # Machine Learning
-scikit-learn==1.3.2
-scipy==1.11.4
-ta==0.10.2
+xgboost>=1.7.0
+lightgbm>=3.3.0
+catboost>=1.1.0
 
-# Trading Specific
-vectorbt==0.25.5
-ccxt==4.2.25
-
-# LLM Integration
-openai==1.6.1
-tiktoken==0.5.2
-
-# Database
-sqlalchemy==2.0.25
-asyncpg==0.29.0
-
-# Caching
-redis==5.0.1
-aiocache==0.12.2
+# Time series
+statsmodels>=0.13.0
+prophet>=1.1.0
+pmdarima>=2.0.0
 
 # Monitoring
-prometheus-client==0.19.0
-structlog==24.1.0
+prometheus-client>=0.16.0
+structlog>=23.0.0
 
-# Web UI
-streamlit==1.29.0
-plotly==5.18.0
-
-# Async Support
-aiofiles==23.2.1
-asyncio==3.4.3
-
-# NLP
-spacy==3.7.2
-
-# Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-
-# Development
-black==23.12.1
-flake8==6.1.0
-ipython==8.18.1
-
-# Documentation
-mkdocs==1.5.3
-mkdocs-material==9.5.3
+# Development tools
+jupyter>=1.0.0
+ipython>=8.10.0
