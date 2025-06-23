@@ -1,0 +1,21 @@
+{
+  "api": {
+    "base_url": "https://zanlink.com/api/v1",
+    "endpoints": {
+      "journal": "https://zanlink.com/api/v1/journal",
+      "market": "https://zanlink.com/api/v1/market",
+      "patterns": "https://zanlink.com/api/v1/patterns",
+      "llm": "https://zanlink.com/api/v1/llm",
+      "bridge": "https://zanlink.com/api/v1/bridge"
+    }
+  },
+  "cache": {
+    "ttl_minutes": 5,
+    "max_size": 100
+  },
+  "llm": {
+    "model": "gpt-4-turbo-preview",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  }
+}
